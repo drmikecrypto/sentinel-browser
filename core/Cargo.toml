@@ -20,7 +20,6 @@ aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"
 hex = "0.4"
-wasmer = "5.0"
 reqwest = { version = "0.12", features = ["socks", "native-tls"] }
 dirs = "5"
 sysinfo = "0.33"

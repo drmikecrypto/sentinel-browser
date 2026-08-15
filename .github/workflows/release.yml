@@ -99,6 +99,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: build
+    if: always() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -109,12 +110,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-assets
+          merge-multiple: false
 
       - name: Flatten assets
         run: |
           mkdir -p out
-          find release-assets -type f -exec cp {} out/ \;
+          find release-assets -type f -exec cp {} out/ \; || true
           ls -la out
+          test "$(find out -type f | wc -l)" -gt 0
 
       - name: Resolve tag
         id: tag
@@ -133,6 +136,7 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          fail_on_unmatched_files: false
           body: |
             ## Sentinel Browser ${{ steps.tag.outputs.name }}
 
@@ -150,7 +154,7 @@ jobs:
             - **Windows:** needs [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (usually already installed).
             - **Linux:** requires WebKitGTK 4.1 (`libwebkit2gtk-4.1-0` and related packages).
             - **macOS:** unsigned build — right-click → Open the first time, or `xattr -dr com.apple.quarantine` on the binary.
-            - Binaries are **not** Authenticode/notarized in this release unless signing secrets are configured.
+            - Binaries are **not** Authenticode/notarized unless signing secrets are configured.
             - Maintainer: **drmikecrypto**
           files: out/*
         env:
