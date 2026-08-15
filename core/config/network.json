@@ -1,0 +1,15 @@
+{
+  "active_protocol": {
+    "V2Ray": {
+      "VLESS": {
+        "uuid": "default",
+        "encryption": "none",
+        "flow": "xtls-rprx-vision"
+      }
+    }
+  },
+  "custom_bridges": [],
+  "v2ray_configs": [],
+  "secure_dns_provider": "Cloudflare",
+  "secure_dns_provider_custom": ""
+}

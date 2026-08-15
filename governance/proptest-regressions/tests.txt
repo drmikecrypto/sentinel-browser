@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 923931adcca5e46877377e2adfe941340549eda5a9d0eb49b7d807533a72b19c # shrinks to secret = [0, 0, 0, 0, 0, 11, 79, 169, 177, 40, 157, 42, 198, 93, 178, 82, 208, 153, 120, 8, 198, 176, 100, 81, 120, 40, 49, 232, 17, 2, 153, 31], wrong_secret = [151, 0, 72, 115, 31, 55, 39, 16, 77, 203, 245, 8, 155, 40, 181, 121, 215, 123, 238, 241, 150, 23, 76, 251, 37, 159, 107, 183, 112, 171, 119, 20], proposal_id = 44

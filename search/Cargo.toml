@@ -1,0 +1,25 @@
+[package]
+name = "sent-search"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+libp2p = { version = "0.56", features = ["tokio", "tcp", "noise", "yamux", "kad", "macros", "autonat", "identify", "ping", "relay", "dcutr"] }
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+blake3 = "1.5"
+urlencoding = "2.1"
+reqwest = { version = "0.12", features = ["json", "native-tls", "socks"] }
+regex = "1.10"
+html-escape = "0.2"
+arti-client = { version = "0.39", features = ["tokio", "native-tls", "bridge-client", "pt-client"] }
+tor-rtcompat = { version = "0.39", features = ["tokio", "native-tls"] }
+tantivy = "0.22"
+dirs = "5"
+scraper = "0.20"
+hex = "0.4"

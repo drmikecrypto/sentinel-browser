@@ -1,0 +1,30 @@
+[package]
+name = "sent-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+crossbeam-channel = "0.5"
+winit = "0.29"
+sent-net = { path = "../network" }
+sent-ui = { path = "../ui" }
+sent-search = { path = "../search" }
+sent-shield = { path = "../security" }
+sent-gov = { path = "../governance" }
+rusqlite = { version = "0.38", features = ["bundled"] }
+aes-gcm = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+hex = "0.4"
+wasmer = "5.0"
+reqwest = { version = "0.12", features = ["socks", "native-tls"] }
+dirs = "5"
+sysinfo = "0.33"
+
+[dev-dependencies]
+tempfile = "3.10"
+

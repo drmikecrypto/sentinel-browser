@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.0.1)"
+        required: true
+        default: "v0.0.1"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows-x64
+            artifact: sentinel-browser-windows-x64.exe
+            path: target/release/sentinel-browser.exe
+          - os: ubuntu-22.04
+            name: linux-x64
+            artifact: sentinel-browser-linux-x64
+            path: target/release/sentinel-browser
+          - os: macos-14
+            name: macos-arm64
+            artifact: sentinel-browser-macos-arm64
+            path: target/release/sentinel-browser
+          - os: macos-13
+            name: macos-x64
+            artifact: sentinel-browser-macos-x64
+            path: target/release/sentinel-browser
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Linux system deps (WebKitGTK / wgpu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential pkg-config \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxrandr-dev
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.name }}
+
+      - name: cargo build --release
+        run: cargo build --release -p sentinel-browser
+
+      - name: Stage artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "${{ matrix.path }}" "dist/${{ matrix.artifact }}"
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            chmod +x "dist/${{ matrix.artifact }}"
+          fi
+          ls -la dist
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Flatten assets
+        run: |
+          mkdir -p out
+          find release-assets -type f -exec cp {} out/ \;
+          ls -la out
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: Sentinel Browser ${{ steps.tag.outputs.name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## Sentinel Browser ${{ steps.tag.outputs.name }}
+
+            Privacy-native AGPL browser (Path 1): WebView content engine, Tor via arti, Google-free Horus search, adblock shields.
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | Windows x64 | `sentinel-browser-windows-x64.exe` |
+            | Linux x64 | `sentinel-browser-linux-x64` |
+            | macOS Apple Silicon | `sentinel-browser-macos-arm64` |
+            | macOS Intel | `sentinel-browser-macos-x64` |
+
+            ### Notes
+            - **Windows:** needs [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (usually already installed).
+            - **Linux:** requires WebKitGTK 4.1 (`libwebkit2gtk-4.1-0` and related packages).
+            - **macOS:** unsigned build — right-click → Open the first time, or `xattr -dr com.apple.quarantine` on the binary.
+            - Binaries are **not** Authenticode/notarized in this release unless signing secrets are configured.
+            - Maintainer: **drmikecrypto**
+          files: out/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

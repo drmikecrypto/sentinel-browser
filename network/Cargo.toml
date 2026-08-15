@@ -1,0 +1,29 @@
+[package]
+name = "sent-net"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+anyhow = "1.0"
+async-trait = "0.1"
+futures = "0.3"
+arti-client = { version = "0.39", features = ["tokio", "native-tls", "bridge-client", "pt-client"] }
+tor-rtcompat = { version = "0.39", features = ["tokio", "native-tls"] }
+rusqlite = { version = "0.38", features = ["bundled"] }
+hickory-resolver = { version = "0.25", features = ["tokio", "webpki-roots", "https-ring"] }
+url = "2.5.8"
+tokio-native-tls = "0.3.1"
+native-tls = "0.2.14"
+serde_json = "1.0"
+regex = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json", "socks", "native-tls"] }
+sent-shield = { path = "../security" }
+hkdf = "0.12"
+sha2 = "0.10"
+adblock = { version = "0.13", default-features = false, features = ["full-regex-handling", "embedded-domain-resolver"] }
+
+[dev-dependencies]
+tempfile = "3.10"
