@@ -130,13 +130,19 @@ async fn test_full_browser_workflow_integration() {
     let history = aegis.storage.get_history().unwrap();
     assert!(!history.iter().any(|(u, _, _)| u == "https://hidden.com"));
     
-    // 6. Network Change
-    aegis.navigate("sentinel://network?type=v2ray", true).await.unwrap();
-    if let sent_net::Protocol::V2Ray { .. } = aegis.network.protocol() {
-        // Success
-    } else {
-        panic!("Network protocol should be V2Ray");
-    }
+    // 6. Network Change — only protocols that work without external binaries
+    aegis.navigate("sentinel://network?type=clear", true).await.unwrap();
+    assert!(
+        matches!(aegis.network.protocol(), sent_net::Protocol::Clearweb),
+        "expected Clearweb, got {:?}",
+        aegis.network.protocol()
+    );
+    aegis.navigate("sentinel://network?type=tor", true).await.unwrap();
+    assert!(
+        matches!(aegis.network.protocol(), sent_net::Protocol::Tor { .. }),
+        "expected Tor, got {:?}",
+        aegis.network.protocol()
+    );
 
     // 7. Re-verify Governance in same workflow to avoid EventLoop recreation
     let vote_url_2 = "sentinel://vote?id=1&approve=true";
