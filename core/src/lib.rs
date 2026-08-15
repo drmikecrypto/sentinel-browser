@@ -20,6 +20,7 @@ use tracing::{info, warn};
 mod storage;
 mod views;
 mod plugins;
+mod update;
 
 pub use storage::StorageManager;
 pub use plugins::PluginManager;
@@ -404,11 +405,14 @@ impl Aegis {
         // 4. Record Performance
         self.perf.record_boot_complete().await;
 
+        // 4b. Background update check (GitHub Releases)
+        update::spawn_periodic_update_check(self.ui_proxy.clone());
+
         // 5. Home
         self.navigate("sentinel://home", true).await?;
         self.sync_tabs_to_ui();
 
-        info!("Cold start completed.");
+        info!("Cold start completed (v{}).", update::current_version());
         self.run_loop().await
     }
 
@@ -964,6 +968,18 @@ impl Aegis {
                     current_url = "sentinel://connect".to_string();
                     continue;
                 }
+                "sentinel://install_pt" => {
+                    match sent_net::install_pt_helpers().await {
+                        Ok(msg) => {
+                            info!("PT install: {}", msg);
+                            Some(views::pt_install_page(true, &msg))
+                        }
+                        Err(e) => {
+                            warn!("PT install failed: {}", e);
+                            Some(views::pt_install_page(false, &e.to_string()))
+                        }
+                    }
+                }
                 "sentinel://connect_test" => {
                     let _ = self.network.connect("1.1.1.1:443").await;
                     current_url = "sentinel://connect".to_string();
@@ -1203,6 +1219,12 @@ fn urlencoding_decode(s: &str) -> String {
         }
     }
     String::from_utf8_lossy(&out).into_owned()
+}
+
+fn html_escape_simple(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 #[cfg(test)]

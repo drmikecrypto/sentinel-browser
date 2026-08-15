@@ -77,6 +77,8 @@ pub enum UiEvent {
     },
     /// Full tab strip sync from Aegis.
     TabsChanged(Vec<TabInfo>),
+    /// Newer GitHub release than this build — show Update chrome control.
+    UpdateAvailable { version: String, html_url: String },
 }
 
 pub struct WindowManager {
@@ -140,6 +142,7 @@ impl WindowManager {
         let mut socks_port: Option<u16> = None;
         let mut tabs: Vec<TabInfo> = Vec::new();
         let mut active_tab_id: u32 = 0;
+        let mut update_available: Option<(String, String)> = None; // version, html_url
         let mut cursor_blink_visible = false;
         let mut last_blink_toggle = Instant::now();
         let blink_interval = Duration::from_millis(500);
@@ -240,6 +243,11 @@ impl WindowManager {
                         }
                         active_tab_id = id;
                     }
+                    window.request_redraw();
+                }
+                Event::UserEvent(UiEvent::UpdateAvailable { version, html_url }) => {
+                    info!("Update available: {}", version);
+                    update_available = Some((version, html_url));
                     window.request_redraw();
                 }
                 Event::UserEvent(UiEvent::NetworkStatusChanged(protocol)) => {
@@ -375,6 +383,11 @@ impl WindowManager {
                                 };
 
                                 let strip = tab_strip_hits(&tabs, width as f32);
+                                let update_hit = update_btn_hit(
+                                    &tabs,
+                                    width as f32,
+                                    update_available.is_some(),
+                                );
                                 if (10.0..=40.0).contains(&cx) && (45.0..=75.0).contains(&cy) {
                                     dispatch(&command_tx, BrowserCommand::Navigate("sentinel://network_menu".into()));
                                 } else if (50.0..=80.0).contains(&cx) && (45.0..=75.0).contains(&cy) {
@@ -383,6 +396,19 @@ impl WindowManager {
                                     dispatch(&command_tx, BrowserCommand::Forward);
                                 } else if (130.0..=160.0).contains(&cx) && (45.0..=75.0).contains(&cy) {
                                     dispatch(&command_tx, BrowserCommand::Refresh);
+                                } else if update_hit
+                                    .map(|(x, y, w, h)| {
+                                        (x as f64..=(x + w) as f64).contains(&cx)
+                                            && (y as f64..=(y + h) as f64).contains(&cy)
+                                    })
+                                    .unwrap_or(false)
+                                {
+                                    if let Some((_, ref url)) = update_available {
+                                        dispatch(
+                                            &command_tx,
+                                            BrowserCommand::Navigate(url.clone()),
+                                        );
+                                    }
                                 } else if let Some(action) = strip.hit(cx, cy) {
                                     match action {
                                         TabHit::New => dispatch(&command_tx, BrowserCommand::NewTab),
@@ -460,6 +486,7 @@ impl WindowManager {
                                 &network_label,
                                 shield_blocked,
                                 &tabs,
+                                update_available.as_ref().map(|(v, _)| v.as_str()),
                             );
                             match spectre.render_chrome(&chrome) {
                                 Ok(_) => {}
@@ -588,12 +615,23 @@ fn tab_strip_hits(tabs: &[TabInfo], width: f32) -> TabStripHits {
     hits
 }
 
+fn update_btn_hit(tabs: &[TabInfo], width: f32, show: bool) -> Option<(f32, f32, f32, f32)> {
+    if !show {
+        return None;
+    }
+    let strip = tab_strip_hits(tabs, width);
+    let (px, _py, pw, _ph) = strip.plus;
+    let status_x = (px + pw + 10.0).max(250.0);
+    Some((status_x + 190.0, 5.0, 90.0, 25.0))
+}
+
 fn build_chrome_boxes(
     width: f32,
     url_text: &str,
     network: &str,
     blocked: u64,
     tabs: &[TabInfo],
+    update_version: Option<&str>,
 ) -> Vec<LayoutBox> {
     let col_bg = Color::INPUT;
     let col_accent = Color::ACCENT;
@@ -685,7 +723,18 @@ fn build_chrome_boxes(
         link: None,
         display: DisplayMode::Block,
     });
-
+    if let Some(ver) = update_version {
+        boxes.push(LayoutBox {
+            x: status_x + 190.0,
+            y: 5.0,
+            width: 90.0,
+            height: 25.0,
+            color: col_accent,
+            text: Some(format!("Update {}", ver)),
+            link: Some("update".into()),
+            display: DisplayMode::Block,
+        });
+    }
     for (i, (x, label)) in [(10.0, "="), (50.0, "<"), (90.0, ">"), (130.0, "R")]
         .into_iter()
         .enumerate()

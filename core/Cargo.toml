@@ -20,9 +20,12 @@ aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"
 hex = "0.4"
-reqwest = { version = "0.12", features = ["socks", "native-tls"] }
+reqwest = { version = "0.12", features = ["json", "socks", "native-tls"] }
 dirs = "5"
 sysinfo = "0.33"
+
+[build-dependencies]
+# none — version injected via rustc-env from workspace if present
 
 [dev-dependencies]
 tempfile = "3.10"

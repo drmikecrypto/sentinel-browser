@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (e.g. v0.0.1)"
+        description: "Tag to release (e.g. v0.0.2)"
         required: true
-        default: "v0.0.1"
+        default: "v0.0.2"
 
 permissions:
   contents: write
@@ -75,6 +75,28 @@ jobs:
           # wasmer/cranelift + rust-lld can fail with undefined __rust_probestack on Linux
           RUSTFLAGS: ${{ runner.os == 'Linux' && '-C link-arg=-fuse-ld=bfd' || '' }}
         run: cargo build --release -p sentinel-browser
+
+      # Optional Authenticode: set repo secrets WINDOWS_CERT_PFX (base64 PFX) + WINDOWS_CERT_PASSWORD.
+      # Skips cleanly when secrets are empty so v0.0.2+ can ship unsigned.
+      - name: Sign Windows binary (optional)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERT_PFX) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_CERT_PASSWORD)) {
+            Write-Host "No WINDOWS_CERT_PFX/PASSWORD secrets — shipping unsigned."
+            exit 0
+          }
+          $pfxPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $signtool) { throw "signtool.exe not found" }
+          & $signtool sign /f $pfxPath /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "${{ matrix.path }}"
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+          Write-Host "Signed ${{ matrix.path }}"
 
       - name: Stage artifact
         shell: bash
@@ -145,13 +167,12 @@ jobs:
             | Windows x64 | `sentinel-browser-windows-x64.exe` |
             | Linux x64 | `sentinel-browser-linux-x64` |
             | macOS Apple Silicon | `sentinel-browser-macos-arm64` |
-            | macOS Intel | `sentinel-browser-macos-x64` |
 
             ### Notes
-            - **Windows:** needs [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (usually already installed).
+            - **Windows:** needs [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (usually already installed). Unsigned unless `WINDOWS_CERT_PFX` + `WINDOWS_CERT_PASSWORD` secrets are set.
             - **Linux:** requires WebKitGTK 4.1 (`libwebkit2gtk-4.1-0` and related packages).
-            - **macOS:** unsigned build — right-click → Open the first time, or `xattr -dr com.apple.quarantine` on the binary.
-            - Binaries are **not** Authenticode/notarized unless signing secrets are configured.
+            - **macOS:** unsigned build — right-click → Open the first time, or `xattr -dr com.apple.quarantine` on the binary. Notarization deferred (no Apple certs).
+            - PT helpers (lyrebird/snowflake) are fetched on demand from Connect, not bundled in these zips.
             - Maintainer: **drmikecrypto**
           files: out/*
         env:

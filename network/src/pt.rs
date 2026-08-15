@@ -7,6 +7,15 @@ use arti_client::config::{BridgeConfigBuilder, CfgPath, TorClientConfig};
 use arti_client::config::pt::TransportConfigBuilder;
 
 pub fn which_bin(name: &str) -> Option<PathBuf> {
+    if let Some(p) = crate::pt_fetch::installed_bin(name) {
+        return Some(p);
+    }
+    // Also map snowflake-client / lyrebird aliases from install dir
+    if name == "obfs4proxy" {
+        if let Some(p) = crate::pt_fetch::installed_bin("lyrebird") {
+            return Some(p);
+        }
+    }
     let env_key = format!("{}_PATH", name.replace('-', "_").to_ascii_uppercase());
     if let Ok(p) = std::env::var(&env_key) {
         let path = PathBuf::from(&p);

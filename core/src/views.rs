@@ -79,7 +79,9 @@ pub fn connect_page(status: &str, profiles: Vec<ConnectionProfile>, pt_status: &
                     <column>
                         <h3>BRIDGES</h3>
                         <p><a href="sentinel://network_menu">Configure bridges</a></p>
-                        <p>obfs4 / Snowflake need PT binaries on PATH. Without them, Tor uses direct bootstrap only.</p>
+                        <p>obfs4 / Snowflake need PT binaries. Install helpers from the Tor Expert Bundle (on-demand):</p>
+                        <p><a href="sentinel://install_pt">Install PT helpers</a></p>
+                        <p>Without them, Tor uses direct bootstrap only.</p>
                     </column>
                     <column>
                         <h3>PROFILES</h3>
@@ -93,6 +95,26 @@ pub fn connect_page(status: &str, profiles: Vec<ConnectionProfile>, pt_status: &
         </body>
     </html>
     "#, status, pt_status, profiles_html)
+}
+
+pub fn pt_install_page(ok: bool, detail: &str) -> String {
+    let title = if ok { "PT HELPERS INSTALLED" } else { "PT INSTALL FAILED" };
+    format!(
+        r#"
+    <html>
+        <body>
+            <section>
+                <h1>{}</h1>
+                <p>{}</p>
+                <p>Helpers are stored under your app data <code>sentinel/pt</code> folder (not bundled in the browser zip).</p>
+                <p><a href="sentinel://connect">Back to Connect</a> · <a href="sentinel://home">Home</a></p>
+            </section>
+        </body>
+    </html>
+    "#,
+        title,
+        html_escape(detail)
+    )
 }
 
 pub fn settings_page(theme: &str, search_engine: &str, security_level: &str, history_enabled: &str) -> String {

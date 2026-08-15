@@ -24,6 +24,9 @@ sent-shield = { path = "../security" }
 hkdf = "0.12"
 sha2 = "0.10"
 adblock = { version = "0.13", default-features = false, features = ["full-regex-handling", "embedded-domain-resolver"] }
+dirs = "5"
+flate2 = "1"
+tar = "0.4"
 
 [dev-dependencies]
 tempfile = "3.10"

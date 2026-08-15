@@ -18,14 +18,16 @@ mod dns;
 mod adblock;
 mod socks;
 mod pt;
+mod pt_fetch;
 mod v2ray;
 
 pub use adblock::{AdBlocker, FilterAction, FilterRule};
 pub use socks::SocksProxy;
 pub use pt::{
-    build_tor_client_config, obfs4_available, persist_bridge_line, pt_status_summary,
+    build_tor_client_config, obfs4_available, obfs4_bin, persist_bridge_line, pt_status_summary,
     snowflake_available,
 };
+pub use pt_fetch::install_pt_helpers;
 pub use v2ray::{v2ray_ready, V2RayHandler};
 use dns::SecureDns;
 pub use dns::DnsProvider;
