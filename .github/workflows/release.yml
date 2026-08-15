@@ -74,6 +74,9 @@ jobs:
           key: release-${{ matrix.name }}
 
       - name: cargo build --release
+        env:
+          # wasmer/cranelift + rust-lld can fail with undefined __rust_probestack on Linux
+          RUSTFLAGS: ${{ runner.os == 'Linux' && '-C link-arg=-fuse-ld=bfd' || '' }}
         run: cargo build --release -p sentinel-browser
 
       - name: Stage artifact
